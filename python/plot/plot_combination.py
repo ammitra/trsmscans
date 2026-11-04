@@ -72,7 +72,11 @@ class CombinationPlotter:
                                        "combination",
                                        f"{self.decay}_{self.identifier}_combination.tsv")
 
+        print(self.input_file)
         self.X_mass_xb, self.S_mass_xb, self.xb_max, self.precision_values = load_data(self.input_file)
+        print(self.X_mass_xb)
+        print(self.S_mass_xb)
+        print(self.xb_max)
 
     def get_output_dir(self) -> str:
         """
@@ -110,6 +114,10 @@ class CombinationPlotter:
                              identifier=self.identifier)
         limits = mass_list.load_limit_data()
 
+        print('------------------------------------DEBUG-----------------------------------------------------------------------')
+        print('mass list', mass_list)
+        print('limits', limits)
+
         # Match and interpolate
         matched = {
             name: match_limit_values_to_subset(self.X_mass_xb,
@@ -120,12 +128,19 @@ class CombinationPlotter:
             for name in ["observed", "expected", "expected_m1", "expected_p1", "expected_m2", "expected_p2"]
         }
 
+        print(f'--------------------------------------------------DEBUG----------------------------------------------------------------')
+        print(matched)
+
+
         masks = {
             name: self.xb_max > matched[name]
             for name in matched
         }
 
+        print(f'------------------------------------------------DEBUG--------------------------------------------------')
         self.print_summary(masks)
+        print(masks, len(masks), len(masks['observed']))
+
 
         # Interpolate masks
         interp_masks = {
@@ -172,6 +187,15 @@ class CombinationPlotter:
                                file_name=os.path.join(self.output_dir, f"{self.decay}_{self.identifier}_ratio_obs.png"),
                                log_x=self.log_x,
                                log_y=self.log_y)
+
+        plot_limit_to_xb_ratio(self.xb_max,
+                               matched["observed"],
+                               self.X_mass_xb,
+                               self.S_mass_xb,
+                               file_name=os.path.join(self.output_dir, f"{self.decay}_{self.identifier}_ratio_limit_to_xb.jpg"),
+                               log_x=self.log_x,
+                               log_y=self.log_y)
+
 
         # Plot precision map
         self.plot_precision_map()
@@ -420,6 +444,84 @@ def plot_xb_to_limit_ratio(xb: np.ndarray,
     patches = [mpatches.Patch(color=colors[i], label=labels[i]) for i in range(len(labels))]
     ax.legend(handles=patches, title="xb / limit", loc="upper right", frameon=True)
 
+    fig.tight_layout()
+    fig.savefig(file_name)
+
+
+def plot_limit_to_xb_ratio(xb: np.ndarray,
+                           limit: np.ndarray,
+                           X: np.ndarray,
+                           S: np.ndarray,
+                           file_name: str,
+                           log_x: bool = False,
+                           log_y: bool = False) -> None:
+    """
+    Plot a categorized xb/limit ratio map with discrete color bands.
+
+    Args:
+        xb (np.ndarray): Array of xb values.
+        limit (np.ndarray): Array of limit values at each point.
+        X (np.ndarray): X mass coordinates.
+        S (np.ndarray): S mass coordinates.
+        file_name (str): Output file path.
+        log_x (bool): Log scale for X axis.
+        log_y (bool): Log scale for Y axis.
+    """
+    ratio = np.divide(limit, xb, out=np.full_like(xb, np.nan), where=(limit > 0))
+    Xi, Yi, Zi = interpolate_grid(X, S, ratio)
+
+    # # Thresholds: all except INSENSITIVE and MISSING, include SATURATED separately
+    # thresholds = [p.threshold() for p in Precision if p not in {Precision.MISSING, Precision.INSENSITIVE, Precision.SATURATED}]
+    # saturated_threshold = Precision.SATURATED.threshold()
+
+    # # Build level boundaries
+    # levels = [0.0] + thresholds + [1.0, saturated_threshold]
+    # levels.append(saturated_threshold * 1.2)  # pad upper range
+
+    # # Labels: one per bin
+    # labels = [f"< {thresholds[0]:.3f}"]
+    # labels += [f"{thresholds[i]:.2f}-{thresholds[i+1]:.2f}" for i in range(len(thresholds) - 1)]
+    # labels.append(f"{thresholds[-1]:.2f}-1.0")
+    # labels.append(f"1.0-{saturated_threshold:.0f}")
+    # labels.append(f"> {saturated_threshold:.0f}")
+
+    # Levels 
+    levels = [5, 10, 15, 20, 25]
+    labels = [f'{i}' for i in levels]
+    labels = ['< 5', '5-10', '10-15', '15-20', '> 20']
+
+    num_bins = len(levels) - 1
+    colors = get_discrete_colors(num_bins+1,
+                                 cmap_name="turbo")
+    print('num_bins = %s\nnum_colors = %s\nnum_levels = %s\nnum_labels = %s'%(num_bins, len(colors), len(levels), len(labels)))
+
+    cmap = mcolors.ListedColormap(colors)
+    norm = BoundaryNorm(levels,
+                        ncolors=cmap.N,
+                        clip=True)
+
+    fig, ax = plt.subplots()
+    ax.contourf(Xi, Yi, Zi,
+                levels=levels,
+                cmap=cmap,
+                norm=norm,
+                extend='both')
+
+    ax.set_xlabel(mass_label("X"))
+    ax.set_ylabel(mass_label("S"))
+
+    if log_x:
+        ax.set_xscale("log")
+    if log_y:
+        ax.set_yscale("log")
+
+    ax.set_xlim(900, 1500)
+    ax.set_ylim(70, 1000)
+
+    # Construct a manual legend
+    patches = [mpatches.Patch(color=colors[i], label=labels[i]) for i in range(len(labels))]
+    ax.legend(handles=patches, title="limit / xb", loc="upper right", frameon=True)
+    
     fig.tight_layout()
     fig.savefig(file_name)
 

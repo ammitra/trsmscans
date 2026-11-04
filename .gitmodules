@@ -10,3 +10,6 @@
 [submodule "HiggsTools"]
 	path = externals/higgstools
 	url = git@gitlab.com:higgsbounds/higgstools.git
+[submodule "data/mass_points/datacards-B2G-23-007"]
+	path = data/mass_points/datacards-B2G-23-007
+	url = ssh://git@gitlab.cern.ch:7999/cms-analysis/b2g/b2g-23-007/datacards.git

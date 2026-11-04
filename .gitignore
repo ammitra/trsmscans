@@ -14,3 +14,5 @@ env.sh
 .submodules_ok
 .paths_ok
 ScannerS.log
+data/mass_points/datacards-B2G-23-007/input
+data/mass_points/datacards-B2G-23-007/models

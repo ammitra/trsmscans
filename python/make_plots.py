@@ -109,6 +109,9 @@ def main() -> None:
             raise ValueError("Identifier (-i/--identifier) is required with -l/--use-mass-list.")
         do_plot_combination = args.only in (None, "combination")
         do_plot_masspoints = args.only in (None, "masspoints")
+        # DEBUG -------------------------------------------------------------------
+        print(do_plot_combination, do_plot_masspoints)
+
 
     else:
         raise ValueError("Please specify either a mass point (-X/--XMass and -S/--SMass) or -l/--use-mass-list.")
@@ -126,6 +129,20 @@ def main() -> None:
             log_y=log_y
         )
         combo_plotter.make_combination_plots()
+
+    ##################### DEBUG
+    print(f"\nMaking combination plots for identifier '{args.identifier}' and decay '{args.decay}'")
+    combo_plotter = CombinationPlotter(
+        model=args.model,
+        decay=args.decay,
+        identifier=args.identifier,
+        plot_limits=not args.no_plot_limits,
+        include_sigma_bands=not args.no_sigma_bands,
+        log_x=log_x,
+        log_y=log_y
+    )
+    combo_plotter.make_combination_plots()
+
 
     # Plot mass points if requested
     if do_plot_masspoints:
